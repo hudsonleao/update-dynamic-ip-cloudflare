@@ -120,7 +120,7 @@ const getAllAndUpdate = async (zone, hostname, header, myIpv4) => {
                 }
             }
 
-            const job = new CronJob('*/10 * * * * *', async function () {
+            const job = new CronJob('*/60 * * * * *', async function () {
 
                 let ipJson = await fs.readFile('./myIP.json');
                 ipJson = JSON.parse(ipJson)
