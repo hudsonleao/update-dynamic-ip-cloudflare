@@ -42,7 +42,7 @@ const getDnsRecord = async (hostname, header, zoneId) => {
 const updateDnsRecord = async (header, zoneId, resultDnsRecord, content) => {
     try {
 
-        let data = {
+        const data = {
             type: resultDnsRecord.type,
             name: resultDnsRecord.name,
             proxied: true,
@@ -67,73 +67,77 @@ const updateDnsRecord = async (header, zoneId, resultDnsRecord, content) => {
 };
 
 const getAllAndUpdate = async (zone, hostname, header, myIpv4) => {
-    let zoneId = await getZoneId(zone, header);
+    const zoneId = await getZoneId(zone, header);
 
-    let resultsDnsRecord = await getDnsRecord(hostname, header, zoneId);
+    const resultsDnsRecord = await getDnsRecord(hostname, header, zoneId);
 
     let content;
 
-    for await (const resultDnsRecord of resultsDnsRecord) {
+    for (const resultDnsRecord of resultsDnsRecord) {
 
-            switch (resultDnsRecord.type) {
-                case 'A':
-                    content = await publicIp.v4()
-                    break;
-                case 'AAAA':
-                    content = await publicIp.v6()
-                    break;
-                default:
-                    console.error(`DNS Record Type unsupported: ${resultDnsRecord.type}`)
-                    break;
-            }
-
-            await updateDnsRecord(header, zoneId, resultDnsRecord, content);
-            await fs.writeFile('./myIP.json', `{"ip": "${myIpv4}"}`);
+        switch (resultDnsRecord.type) {
+            case 'A':
+                content = await publicIp.v4()
+                break;
+            case 'AAAA':
+                content = await publicIp.v6()
+                break;
+            default:
+                console.error(`DNS Record Type unsupported: ${resultDnsRecord.type}`)
+                break;
+        }
+        Promise.all([
+            updateDnsRecord(header, zoneId, resultDnsRecord, content),
+            fs.writeFile('./myIP.json', `{"ip": "${myIpv4}"}`)
+        ]);
     };
 }
 
 (async function main() {
     try {
         //Change variables in pm2.yml
-        let zone = process.env.ZONE || "test.com";
-        let hostname = process.env.HOSTNAME || "subdomain.test.com";
-        let email = process.env.EMAIL || "admin@test.com";
-        let token = process.env.TOKEN || "213fw3dsf4terqsdg4sdfsd";
-        const header = {
-            'X-Auth-Email': email,
-            'X-Auth-Key': token
-        };
-        let myIpv4 = await publicIp.v4();
-        //let myIpv6 = await publicIp.v6();
+        const zone = process.env.ZONE || "test.com";
+        const hostnames = process.env.HOSTNAMES || ["subdomain.test.com"];
+        const email = process.env.EMAIL || "admin@test.com";
+        const token = process.env.TOKEN || "213fw3dsf4terqsdg4sdfsd";
 
-        let zoneId = await getZoneId(zone, header);
+        for (const hostname of hostnames) {
 
-        let resultsDnsRecord = await getDnsRecord(hostname, header, zoneId);
+            const header = {
+                'X-Auth-Email': email,
+                'X-Auth-Key': token
+            };
+            const myIpv4 = await publicIp.v4();
 
-        for await (const resultDnsRecord of resultsDnsRecord) {
-            if(resultDnsRecord.type === 'A' && resultDnsRecord.content !== myIpv4){
-                console.log("Updating IP...")
-                await getAllAndUpdate(zone, hostname, header, myIpv4)
+            const zoneId = await getZoneId(zone, header);
+
+            const resultsDnsRecord = await getDnsRecord(hostname, header, zoneId);
+
+            for (const resultDnsRecord of resultsDnsRecord) {
+                if (resultDnsRecord.type === 'A' && resultDnsRecord.content !== myIpv4) {
+                    console.log("Updating IP...")
+                    await getAllAndUpdate(zone, hostname, header, myIpv4)
+                }
             }
+
+            const job = new CronJob('*/10 * * * * *', async function () {
+
+                let ipJson = await fs.readFile('./myIP.json');
+                ipJson = JSON.parse(ipJson)
+
+                const myIpv4 = await publicIp.v4();
+
+                if (ipJson.ip !== myIpv4) {
+
+                    console.log("Updating IP...")
+
+                    await getAllAndUpdate(zone, hostname, header, myIpv4)
+
+                }
+
+            }, null, true, 'America/Sao_Paulo');
+            job.start();
         }
-
-        let job = new CronJob('*/60 * * * * *', async function () {
-
-            let ipJson = await fs.readFile('./myIP.json');
-            ipJson = JSON.parse(ipJson)
-
-            myIpv4 = await publicIp.v4();
-
-            if (ipJson.ip !== myIpv4) {
-
-                console.log("Updating IP...")
-
-                await getAllAndUpdate(zone, hostname, header, myIpv4)
-
-            }
-
-        }, null, true, 'America/Sao_Paulo');
-        job.start();
     } catch (error) {
         console.error(`main - Error: ${error}`);
     }
