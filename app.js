@@ -89,7 +89,10 @@ const getAllAndUpdate = async (zone, hostname, header, myIpv4) => {
         Promise.all([
             updateDnsRecord(header, zoneId, resultDnsRecord, content),
             fs.writeFile('./myIP.json', `{"ip": "${myIpv4}"}`)
-        ]);
+        ]).catch(error => {
+            throw new Error(error)
+        });
+
     };
 }
 
