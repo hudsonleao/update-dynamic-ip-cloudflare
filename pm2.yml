@@ -3,7 +3,7 @@ apps:
     script   : ./app.js
     log_date_format : 'YYYY-MM-DD HH:mm:ss'
     env    :
-      ZONE: test.com
-      HOSTNAMES: ['subdomain.test.com']
+      ZONE: ["test.com"]
+      HOSTNAMES: ["subdomain.test.com"]
       EMAIL: admin@test.com
       TOKEN: 213fw3dsf4terqsdg4sdfsd

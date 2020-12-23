@@ -99,47 +99,50 @@ const getAllAndUpdate = async (zone, hostname, header, myIpv4) => {
 (async function main() {
     try {
         //Change variables in pm2.yml
-        const zone = process.env.ZONE || "test.com";
+        const zones = process.env.ZONE || ["test.com"];
         const hostnames = process.env.HOSTNAMES || ["subdomain.test.com"];
         const email = process.env.EMAIL || "admin@test.com";
         const token = process.env.TOKEN || "213fw3dsf4terqsdg4sdfsd";
 
-        for (const hostname of hostnames) {
+        for (const zone of zones) {
+            for (const hostname of hostnames) {
+                if (hostname.indexof(zone) !== -1) {
+                    const header = {
+                        'X-Auth-Email': email,
+                        'X-Auth-Key': token
+                    };
+                    const myIpv4 = await publicIp.v4();
 
-            const header = {
-                'X-Auth-Email': email,
-                'X-Auth-Key': token
-            };
-            const myIpv4 = await publicIp.v4();
+                    const zoneId = await getZoneId(zone, header);
 
-            const zoneId = await getZoneId(zone, header);
+                    const resultsDnsRecord = await getDnsRecord(hostname, header, zoneId);
 
-            const resultsDnsRecord = await getDnsRecord(hostname, header, zoneId);
+                    for (const resultDnsRecord of resultsDnsRecord) {
+                        if (resultDnsRecord.type === 'A' && resultDnsRecord.content !== myIpv4) {
+                            console.log("Updating IP...")
+                            await getAllAndUpdate(zone, hostname, header, myIpv4)
+                        }
+                    }
 
-            for (const resultDnsRecord of resultsDnsRecord) {
-                if (resultDnsRecord.type === 'A' && resultDnsRecord.content !== myIpv4) {
-                    console.log("Updating IP...")
-                    await getAllAndUpdate(zone, hostname, header, myIpv4)
+                    const job = new CronJob('*/60 * * * * *', async function () {
+
+                        let ipJson = await fs.readFile('./myIP.json');
+                        ipJson = JSON.parse(ipJson)
+
+                        const myIpv4 = await publicIp.v4();
+
+                        if (ipJson.ip !== myIpv4) {
+
+                            console.log("Updating IP...")
+
+                            await getAllAndUpdate(zone, hostname, header, myIpv4)
+
+                        }
+
+                    }, null, true, 'America/Sao_Paulo');
+                    job.start();
                 }
             }
-
-            const job = new CronJob('*/60 * * * * *', async function () {
-
-                let ipJson = await fs.readFile('./myIP.json');
-                ipJson = JSON.parse(ipJson)
-
-                const myIpv4 = await publicIp.v4();
-
-                if (ipJson.ip !== myIpv4) {
-
-                    console.log("Updating IP...")
-
-                    await getAllAndUpdate(zone, hostname, header, myIpv4)
-
-                }
-
-            }, null, true, 'America/Sao_Paulo');
-            job.start();
         }
     } catch (error) {
         console.error(`main - Error: ${error}`);
