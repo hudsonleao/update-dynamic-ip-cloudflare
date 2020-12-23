@@ -106,7 +106,7 @@ const getAllAndUpdate = async (zone, hostname, header, myIpv4) => {
 
         for (const zone of zones) {
             for (const hostname of hostnames) {
-                if (hostname.indexof(zone) !== -1) {
+                if (hostname.indexOf(zone) !== -1) {
                     const header = {
                         'X-Auth-Email': email,
                         'X-Auth-Key': token
