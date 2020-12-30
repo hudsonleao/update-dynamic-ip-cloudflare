@@ -5,21 +5,18 @@ const Main = require('./main')();
 program.version('V1')
 
 program
-    .option('-a, --auth', 'Register email and token')
-    .option('-e, --email [value]', 'Register email, need to use it with the --auth parameter')
-    .option('-t, --token [value]', 'Register token, need to use it with the --auth parameter')
-    .option('-la, --list_auth', 'List auth registered')
+    .option('-e, --email [value]', 'Register email')
+    .option('-t, --token [value]', 'Register token')
+    .option('-la, --list_auth', 'List auth, email and token registered')
     .option('-z, --zone [value]', 'Register zone')
     .option('-rz, --remove_zone [value]', 'Remove zone')
     .option('-lz, --list_zones', 'List zones registered')
-    .option('-h, --hostname [value]', 'Register hostname')
+    .option('-H, --hostname [value]', 'Register hostname')
     .option('-rh, --remove_hostname [value]', 'Remove hostname')
     .option('-lh, --list_hostnames', 'List hostnames registered')
-    .action(async ({ auth, email, token, list_auth, zone, remove_zone, list_zones, hostname, remove_hostname, list_hostnames}) => {
+    .action(async ({ email, token, list_auth, zone, remove_zone, list_zones, hostname, remove_hostname, list_hostnames}) => {
         try {
-            if (auth) {
-                if (!email) throw new Error('email cannot be empty');
-                if (!token) throw new Error('token cannot be empty');
+            if (email || token) {
                 const { error } = await Main.registerAuth(email, token)
                 if (!error) console.log("Registered auth successfully!")
             }

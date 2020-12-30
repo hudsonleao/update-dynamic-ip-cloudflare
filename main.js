@@ -4,7 +4,24 @@ module.exports = () => {
   let main = {}
   main.registerAuth = async (email, token) => {
     try {
-      const write = await fs.writeFile('./data/auth.json', `{"email": "${email}", "token": "${token}"}`);
+      let write;
+      if (email && token) {
+        write = await fs.writeFile('./data/auth.json', `{"email": "${email}", "token": "${token}"}`);
+      } else if (!email) {
+        const read = JSON.parse(await fs.readFile('./data/auth.json', 'utf-8'));
+        if (read.email) {
+          write = await fs.writeFile('./data/auth.json', `{"email": "${read.email}", "token": "${token}"}`);
+        } else {
+          write = await fs.writeFile('./data/auth.json', `{"token": "${token}"}`);
+        }
+      } else if (!token) {
+        const read = JSON.parse(await fs.readFile('./data/auth.json', 'utf-8'));
+        if (read.token) {
+          write = await fs.writeFile('./data/auth.json', `{"email": "${email}", "token": "${read.token}"}`);
+        } else {
+          write = await fs.writeFile('./data/auth.json', `{"email": "${email}"}`);
+        }
+      }
       if (write) return true;
       return false
     } catch (error) {
@@ -58,8 +75,8 @@ module.exports = () => {
           }
         }
       }
-      
-      if(zones.length === newArray.length) {
+
+      if (zones.length === newArray.length) {
         console.log('No record has been removed, check if it is registered.')
         return false;
       }
@@ -121,8 +138,8 @@ module.exports = () => {
           }
         }
       }
-      
-      if(hostnames.length === newArray.length) {
+
+      if (hostnames.length === newArray.length) {
         console.log('No record has been removed, check if it is registered.')
         return false;
       }
