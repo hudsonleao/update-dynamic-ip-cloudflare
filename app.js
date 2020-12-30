@@ -2,6 +2,7 @@ const fetch = require('node-fetch');
 const CronJob = require('cron').CronJob;
 const publicIp = require('public-ip');
 const fs = require('fs').promises;
+require('./check')();
 
 const getZoneId = async (zone, header) => {
     try {
@@ -98,14 +99,20 @@ const getAllAndUpdate = async (zone, hostname, header, myIpv4) => {
 
 (async function main() {
     try {
-        //Change variables in pm2.yml
-        const zones = process.env.ZONE || ["test.com"];
-        const hostnames = process.env.HOSTNAMES || ["subdomain.test.com"];
-        const email = process.env.EMAIL || "admin@test.com";
-        const token = process.env.TOKEN || "213fw3dsf4terqsdg4sdfsd";
+        const zones = JSON.parse(await fs.readFile('./data/zones.json'));
+        if(zones.length === 0) throw new Error('Zones cannot be empty');
 
-        for (const zone of zones) {
-            for (const hostname of hostnames) {
+        const hostnames = JSON.parse(await fs.readFile('./data/hostnames.json'));
+        if(hostnames.length === 0) throw new Error('Hostname cannot be empty');
+
+        const auth = JSON.parse(await fs.readFile('./data/auth.json'));
+        if(!auth) throw new Error('Auth cannot be empty');
+        const { email, token } = auth
+        if(!email) throw new Error('Email cannot be empty');
+        if(!token) throw new Error('Token cannot be empty');
+
+        for (const {zone} of zones) {
+            for (const {hostname} of hostnames) {
                 if (hostname.indexOf(zone) !== -1) {
                     const header = {
                         'X-Auth-Email': email,
@@ -145,6 +152,6 @@ const getAllAndUpdate = async (zone, hostname, header, myIpv4) => {
             }
         }
     } catch (error) {
-        console.error(`main - Error: ${error}`);
+        console.error(`main - ${error}`);
     }
 })();
